@@ -55,19 +55,24 @@ def chosen_folder(update, context):
     try:
         gd = GoogleDrive(update.effective_user.id)
     except Exception as e:
-        context.bot.send_message(chat_id=update.effective_user.id,
-                                 text='Please make sure the SA archive has been uploaded and the collection folder has been configured.\n'
-                                      '<code>{}</code>'.format(html.escape(str(e))),
-                                 parse_mode=ParseMode.HTML)
+        context.bot.send_message(
+            chat_id=update.effective_user.id,
+            text=f'Please make sure the SA archive has been uploaded and the collection folder has been configured.\n<code>{html.escape(str(e))}</code>',
+            parse_mode=ParseMode.HTML,
+        )
+
         return
 
     query = update.callback_query
-    match = re.search(r'^{},(?P<folder_id>[\dA-Za-z\-_]+)$'.format(callback_query_prefix), query.data)
+    match = re.search(
+        f'^{callback_query_prefix},(?P<folder_id>[\dA-Za-z\-_]+)$', query.data
+    )
+
     if not match:
         alert_users(context, update.effective_user, 'invalid query', query.data)
         query.answer(text='Yo-he!', show_alert=True)
         return
-    folder_id = match.group('folder_id')
+    folder_id = match['folder_id']
 
     drive_ids_replace = context.user_data.get(udkey_fav_folders_replace, None)
     favourite_drive_ids = context.user_data.get(udkey_folders, {})
@@ -90,7 +95,7 @@ def chosen_folder(update, context):
         context.dispatcher.update_persistence()
         set_folders(update, context)
     else:
-        query.answer(text='Maximum {}'.format(max_folders), show_alert=True)
+        query.answer(text=f'Maximum {max_folders}', show_alert=True)
     return
 
 
@@ -102,10 +107,12 @@ def choose_folder(update, context):
     try:
         gd = GoogleDrive(update.effective_user.id)
     except Exception as e:
-        context.bot.send_message(chat_id=update.effective_user.id,
-                                 text='Please make sure the SA archive has been uploaded and the collection folder has been configured.\n'
-                                      '<code>{}</code>'.format(html.escape(str(e))),
-                                 parse_mode=ParseMode.HTML)
+        context.bot.send_message(
+            chat_id=update.effective_user.id,
+            text=f'Please make sure the SA archive has been uploaded and the collection folder has been configured.\n<code>{html.escape(str(e))}</code>',
+            parse_mode=ParseMode.HTML,
+        )
+
         return
 
     if context.args:
@@ -116,9 +123,12 @@ def choose_folder(update, context):
         except Exception as e:
             folders = gd.get_drives()
             current_folder_id = ''
-            context.bot.send_message(chat_id=update.effective_user.id,
-                                     text='Error：\n<code>{}</code>'.format(html.escape(str(e))),
-                                     parse_mode=ParseMode.HTML)
+            context.bot.send_message(
+                chat_id=update.effective_user.id,
+                text=f'Error：\n<code>{html.escape(str(e))}</code>',
+                parse_mode=ParseMode.HTML,
+            )
+
 
     callback_query_prefix = 'choose_folder'
     query = update.callback_query
@@ -133,7 +143,7 @@ def choose_folder(update, context):
             context.user_data[udkey_folders_cache] = copy.deepcopy(folders)
 
     if query:
-        logger.debug('{}: {}'.format(update.effective_user.id, query.data))
+        logger.debug(f'{update.effective_user.id}: {query.data}')
         if query.message.chat_id < 0 and \
                 (not query.message.reply_to_message or
                  query.from_user.id != query.message.reply_to_message.from_user.id):
@@ -141,12 +151,11 @@ def choose_folder(update, context):
             query.answer(text='Yo-he!', show_alert=True)
             return
         message_id = query.message.message_id
-        match = re.search(r'^(?P<un>un)?{}(?P<replace>_replace)?(?:_page#(?P<page>\d+))?'
-                          r'(?:,(?P<folder_id>[\dA-Za-z\-_]+))?$'.format(callback_query_prefix),
-                          query.data)
-        if match:
-            match_folder_id = match.group('folder_id')
-            if match_folder_id:
+        if match := re.search(
+            f'^(?P<un>un)?{callback_query_prefix}(?P<replace>_replace)?(?:_page#(?P<page>\d+))?(?:,(?P<folder_id>[\dA-Za-z\-_]+))?$',
+            query.data,
+        ):
+            if match_folder_id := match['folder_id']:
                 current_folder_id = match_folder_id
                 try:
                     gd.get_file_name(current_folder_id)
@@ -154,18 +163,20 @@ def choose_folder(update, context):
                 except Exception as e:
                     folders = gd.get_drives()
                     current_folder_id = ''
-                    context.bot.send_message(chat_id=update.effective_user.id,
-                                             text='Error：\n<code>{}</code>'.format(html.escape(str(e))),
-                                             parse_mode=ParseMode.HTML)
+                    context.bot.send_message(
+                        chat_id=update.effective_user.id,
+                        text=f'Error：\n<code>{html.escape(str(e))}</code>',
+                        parse_mode=ParseMode.HTML,
+                    )
+
                 context.user_data[udkey_folders_cache] = copy.deepcopy(folders)
                 if not folders:
                     folders = {'#': '(No subfolders)'}
-                match_folder_id_replace = match.group('replace')
-                if match_folder_id_replace:
+                if match_folder_id_replace := match['replace']:
                     context.user_data[udkey_fav_folders_replace] = match_folder_id
-            if match.group('page'):
-                page = int(match.group('page'))
-            if not folders and match.group('page'):
+            if match['page']:
+                page = int(match['page'])
+            if not folders and match['page']:
                 folders = context.user_data.get(udkey_folders_cache, None)
             if not folders:
                 folders = gd.get_drives()
@@ -181,10 +192,7 @@ def choose_folder(update, context):
         page = 1
 
     folders_len = len(folders)
-    page_data = []
-    for item in folders:
-        page_data.append({'text': folders[item], 'data': item})
-
+    page_data = [{'text': folders[item], 'data': item} for item in folders]
     page_data_chosen = list(context.user_data.get(udkey_folders, {}))
     inline_keyboard_drive_ids = get_inline_keyboard_pagination_data(
         callback_query_prefix,
@@ -196,31 +204,50 @@ def choose_folder(update, context):
 
     if current_folder_id:
         current_path = ''
-        current_path_list = gd.get_file_path_from_id(current_folder_id)
-        if current_path_list:
+        if current_path_list := gd.get_file_path_from_id(current_folder_id):
             current_folder_name = current_path_list[0]['name']
             for item in current_path_list:
-                current_path = '/{}{}'.format(item['name'], current_path)
+                current_path = f"/{item['name']}{current_path}"
             if len(current_path_list) > 1:
                 inline_keyboard_drive_ids.insert(
-                    0, [InlineKeyboardButton('📁' + current_path,
-                                             callback_data='{},{}'.format(
-                                                 callback_query_prefix, current_path_list[1]['folder_id']))])
+                    0,
+                    [
+                        InlineKeyboardButton(
+                            f'📁{current_path}',
+                            callback_data=f"{callback_query_prefix},{current_path_list[1]['folder_id']}",
+                        )
+                    ],
+                )
+
             else:
                 inline_keyboard_drive_ids.insert(
-                    0, [InlineKeyboardButton('📁' + current_path,
-                                             callback_data=callback_query_prefix)])
+                    0,
+                    [
+                        InlineKeyboardButton(
+                            f'📁{current_path}',
+                            callback_data=callback_query_prefix,
+                        )
+                    ],
+                )
+
             inline_keyboard_drive_ids.append(
-                [InlineKeyboardButton('Select this folder({})'.format(current_folder_name),
-                                      callback_data='chosen_folder,{}'.format(current_folder_id))])
+                [
+                    InlineKeyboardButton(
+                        f'Select this folder({current_folder_name})',
+                        callback_data=f'chosen_folder,{current_folder_id}',
+                    )
+                ]
+            )
+
     inline_keyboard_drive_ids.append([InlineKeyboardButton('Return to top',
                                                            callback_data='choose_folder' if current_folder_id else '#'),
                                       InlineKeyboardButton('Cancel', callback_data='cancel')])
-    context.bot.edit_message_text(chat_id=update.effective_chat.id,
-                                  message_id=message_id,
-                                  text='Select the directory you want to use, there are {} subdirectories.'.format(
-                                      folders_len),
-                                  reply_markup=InlineKeyboardMarkup(inline_keyboard_drive_ids))
+    context.bot.edit_message_text(
+        chat_id=update.effective_chat.id,
+        message_id=message_id,
+        text=f'Select the directory you want to use, there are {folders_len} subdirectories.',
+        reply_markup=InlineKeyboardMarkup(inline_keyboard_drive_ids),
+    )
 
 
 @restricted
@@ -232,13 +259,7 @@ def set_folders(update, context):
         max_folders = default_max_folders
 
     callback_query_prefix = 'choose_folder'
-    query = update.callback_query
-    page = 1
-    if not query:
-        rsp = update.message.reply_text('Getting shared drives...')
-        rsp.done.wait(timeout=60)
-        message_id = rsp.result().message_id
-    else:
+    if query := update.callback_query:
         if query.message.chat_id < 0 and \
                 (not query.message.reply_to_message or
                  query.from_user.id != query.message.reply_to_message.from_user.id):
@@ -246,19 +267,28 @@ def set_folders(update, context):
             query.answer(text='Yo-he!', show_alert=True)
             return
         message_id = query.message.message_id
-    folder_ids = context.user_data.get(udkey_folders, None)
-
-    if folder_ids:
+    else:
+        rsp = update.message.reply_text('Getting shared drives...')
+        rsp.done.wait(timeout=60)
+        message_id = rsp.result().message_id
+    if folder_ids := context.user_data.get(udkey_folders, None):
         folder_ids_len = len(folder_ids)
-        page_data = []
-        for item in folder_ids:
-            page_data.append({'text': simplified_path(folder_ids[item]['path']), 'data': '{}'.format(item)})
+        page_data = [
+            {
+                'text': simplified_path(folder_ids[item]['path']),
+                'data': f'{item}',
+            }
+            for item in folder_ids
+        ]
+
+        page = 1
         inline_keyboard_drive_ids = get_inline_keyboard_pagination_data(
-            callback_query_prefix + '_replace',
+            f'{callback_query_prefix}_replace',
             page_data,
             page=page,
             max_per_page=10,
         )
+
     else:
         inline_keyboard_drive_ids = []
         folder_ids_len = 0
@@ -266,10 +296,9 @@ def set_folders(update, context):
         inline_keyboard_drive_ids.insert(0, [InlineKeyboardButton('Add favorite folder', callback_data=callback_query_prefix)])
     inline_keyboard_drive_ids.append([InlineKeyboardButton('Done', callback_data='cancel')])
 
-    context.bot.edit_message_text(chat_id=update.effective_chat.id,
-                                  message_id=message_id,
-                                  text='Total {}/{} Destination Folders：'.format(
-                                      folder_ids_len,
-                                      max_folders,
-                                  ),
-                                  reply_markup=InlineKeyboardMarkup(inline_keyboard_drive_ids))
+    context.bot.edit_message_text(
+        chat_id=update.effective_chat.id,
+        message_id=message_id,
+        text=f'Total {folder_ids_len}/{max_folders} Destination Folders：',
+        reply_markup=InlineKeyboardMarkup(inline_keyboard_drive_ids),
+    )

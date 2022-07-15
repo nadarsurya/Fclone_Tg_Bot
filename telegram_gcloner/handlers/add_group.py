@@ -23,22 +23,21 @@ def add_group(update, context):
                                      update.message.new_chat_members[0].id)
     logger.info(message)
     context.bot.send_message(chat_id=config.USER_IDS[0], text=message, parse_mode=ParseMode.HTML)
-    if update.message.chat_id not in config.GROUP_IDS:
-        if update.message.new_chat_members[0].id == context.bot.id:
-            mention_html_from_user = mention_html(update.message.from_user.id,
-                                                  html.escape(update.message.from_user.full_name))
-            context.bot.send_message(chat_id=update.message.chat_id,
-                                     text='【{}】Thank you for adding this bot to the group.{}'
-                                     .format(mention_html_from_user,
-                                             config.AD_STRING.format(context.bot.username)),
-                                     parse_mode=ParseMode.HTML)
-            context.bot.send_message(chat_id=update.message.chat_id, text='This bot is unauthorized to be in this group and has left.')
-            message = 'Left unauthorized group: {} ({}). {} {}. {}'.format(
-                update.message.chat.title,
-                update.message.chat_id,
-                mention_html_from_user,
-                update.message.from_user.id,
-                update.message.text)
-            context.bot.leave_chat(update.message.chat_id)
-            logger.warning(message)
-            context.bot.send_message(chat_id=config.USER_IDS[0], text=message, parse_mode=ParseMode.HTML)
+    if (
+        update.message.chat_id not in config.GROUP_IDS
+        and update.message.new_chat_members[0].id == context.bot.id
+    ):
+        mention_html_from_user = mention_html(update.message.from_user.id,
+                                              html.escape(update.message.from_user.full_name))
+        context.bot.send_message(
+            chat_id=update.message.chat_id,
+            text=f'【{mention_html_from_user}】Thank you for adding this bot to the group.{config.AD_STRING.format(context.bot.username)}',
+            parse_mode=ParseMode.HTML,
+        )
+
+        context.bot.send_message(chat_id=update.message.chat_id, text='This bot is unauthorized to be in this group and has left.')
+        message = f'Left unauthorized group: {update.message.chat.title} ({update.message.chat_id}). {mention_html_from_user} {update.message.from_user.id}. {update.message.text}'
+
+        context.bot.leave_chat(update.message.chat_id)
+        logger.warning(message)
+        context.bot.send_message(chat_id=config.USER_IDS[0], text=message, parse_mode=ParseMode.HTML)
